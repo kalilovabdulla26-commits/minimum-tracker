@@ -79,7 +79,7 @@ const HOUSES=["ХБК","Анар","Айтиев","Мэрия","Таатан","С
 const proper=s=>String(s||"").trim().replace(/\s+/g," ").toLocaleLowerCase("ru").replace(/(^|[^a-zа-яёөүң])([a-zа-яёөүң])/gi,(m,a,b)=>a+b.toLocaleUpperCase("ru"));
 const pidOf=(name,house)=>proper(name)+"|"+String(house||"").trim();
 const splitId=id=>[id.slice(0,-11),id.slice(-10)];
-let base={},own={},pending={},extraPeople=[],zikrsLocal={},lastRows=[];
+let base={},own={},pending={},extraPeople=[],zikrsLocal={},lastRows=[],lastUsers=[],registered=new Set();
 
 function rebuild(id){
   const b=base[id]||{},o=own[id]||{},v={};
@@ -98,6 +98,8 @@ function applyRows(rows){
     FIELDS.forEach((f,i)=>{const x=+(r.v||[])[i]||0;if(x)b[f]=(b[f]||0)+x});
   });
   for(const k in srv)if(!pending[k]&&!timers[k])own[k]=srv[k];
+  lastUsers.forEach(u=>{if(!ppl.has(u.id))ppl.set(u.id,{id:u.id,name:u.n,house:u.h})});
+  registered=new Set(lastUsers.map(u=>u.id));
   extraPeople=extraPeople.filter(p=>!ppl.has(p.id));
   people=[...ppl.values(),...extraPeople];
   people.forEach(p=>{if(zikrsLocal[p.id])p.zikrs=zikrsLocal[p.id]});
@@ -105,9 +107,9 @@ function applyRows(rows){
   new Set([...Object.keys(base),...Object.keys(own)]).forEach(rebuild);
 }
 function localLoad(){
-  try{const o=JSON.parse(ls.get("mt_v2")||"{}");own=o.own||{};pending=o.pending||{};extraPeople=o.extra||[];progress=o.progress||{};settings=o.settings||{};zikrsLocal=o.zikrs||{};applySettings();applyRows(o.rows||[])}catch(e){}
+  try{const o=JSON.parse(ls.get("mt_v2")||"{}");own=o.own||{};pending=o.pending||{};lastUsers=o.users||[];extraPeople=o.extra||[];progress=o.progress||{};settings=o.settings||{};zikrsLocal=o.zikrs||{};applySettings();applyRows(o.rows||[])}catch(e){}
 }
-function localSave(){ls.set("mt_v2",JSON.stringify({rows:lastRows,own,pending,extra:extraPeople,progress,settings,zikrs:zikrsLocal}))}
+function localSave(){ls.set("mt_v2",JSON.stringify({users:lastUsers,rows:lastRows,own,pending,extra:extraPeople,progress,settings,zikrs:zikrsLocal}))}
 
 function change(k,val,date=selDate){
   if(!me){openPeople();return false}
@@ -121,29 +123,37 @@ function change(k,val,date=selDate){
 }
 const bump=(k,d=1,date=selDate)=>change(k,(+valsOn(me,date)[k]||0)+d,date);
 
+/* ---------- кирүү (аты+үй = логин, сырсөз) ---------- */
+let auth=(()=>{try{return JSON.parse(ls.get("mt_auth")||"null")}catch(e){return null}})();
+const needAuth=()=>!!API;
+function setAuth(a){auth=a;if(a){ls.set("mt_auth",JSON.stringify(a));me=a.id;ls.set("mt_person",me)}else{try{localStorage.removeItem("mt_auth")}catch(e){};me="";ls.set("mt_person","")}}
+async function api(body){const r=await fetch(API,{method:"POST",body:JSON.stringify(body)});return r.json()}
+const AUTH_ERR={wrong:"Сырсөз туура эмес",locked:"Көп жолу туура эмес терилди. Бир аздан кийин кайра аракет кылыңыз",exists:"Бул ат+үй мурун катталган — тизмеден таап, сырсөз менен кириңиз",short:"Сырсөз кеминде 4 белги болсун",nouser:"Бул адам катталган эмес",name:"Атыңызды жана үйүңүздү жазыңыз"};
+
 let flushing=false;
 async function flush(){
   if(!API||flushing||!navigator.onLine)return;
-  const ids=Object.keys(pending).filter(id=>!timers[id]);if(!ids.length)return;
+  if(needAuth()&&!auth)return;
+  const ids=Object.keys(pending).filter(id=>!timers[id]&&splitId(id)[0]===(auth?auth.id:me));if(!ids.length)return;
   flushing=true;let ok=false;
   const snap=ids.map(id=>JSON.stringify(own[id]||{}));
-  const items=ids.map(id=>{const [pid,date]=splitId(id),p=people.find(x=>x.id===pid)||{name:pid.split("|")[0],house:pid.split("|")[1]||""};
-    return{key:id,name:p.name,house:p.house,date,values:own[id]||{}}});
+  const items=ids.map(id=>({date:splitId(id)[1],values:own[id]||{}}));
   try{
-    const r=await fetch(API,{method:"POST",body:JSON.stringify({items})}).then(r=>r.json());
+    const r=await api({auth,items});
+    if(r&&r.error==="auth"){setAuth(null);render();toast("Кайра кириңиз");openPeople();throw new Error("auth")}
     if(!r||!r.ok)throw new Error(r&&r.error);
     ids.forEach((id,i)=>{if(JSON.stringify(own[id]||{})===snap[i])delete pending[id]});
     localSave();ok=true;setStatus("сакталды ✓");
   }catch(e){setStatus("сакталбады — кийин кайра жөнөтүлөт")}
   flushing=false;
-  if(ok&&Object.keys(pending).some(id=>!timers[id]))setTimeout(flush,300);
+  if(ok&&ids.length&&Object.keys(pending).some(id=>!timers[id]&&splitId(id)[0]===auth?.id))setTimeout(flush,300);
 }
 async function refresh(){
   if(!API)return;
   try{
     const r=await fetch(API+(API.includes("?")?"&":"?")+"t="+Date.now()).then(r=>r.json());
     if(!r||!r.ok)throw new Error(r&&r.error);
-    applyRows(r.rows);localSave();setStatus("жалпы ✓");render();
+    lastUsers=r.users||[];applyRows(r.rows);localSave();setStatus("жалпы ✓");render();
   }catch(e){setStatus("байланыш жок ⚠")}
   flush();
 }
@@ -153,7 +163,7 @@ function saveProgress(obj){
   if(!me)return;
   progress[me]={...(progress[me]||{}),...obj};localSave();
 }
-function addPerson(name,house){
+function addPerson(name,house){ // сырсөзсүз режим (таблица туташпаса)
   name=proper(name).slice(0,30);house=String(house||"").trim();if(!name||!house)return;
   const id=pidOf(name,house);
   if(!people.some(p=>p.id===id)){const p={id,name,house};extraPeople.push(p);people.push(p)}
@@ -170,27 +180,69 @@ function openHousePick(name,oldId){
       <form id="hForm" class="two"><input class="field" id="hNew" placeholder="Башка үй" maxlength="30" autocomplete="off"><button class="wbtn" type="submit" style="padding:12px">OK</button></form>
       <button class="wbtn" data-act="${oldId?"close":"backpeople"}">‹ Артка</button>`;
     const pick=h=>{h=String(h||"").trim();if(!h)return;
-      if(oldId)changeHouse(oldId,h);else addPerson(name,h);
-      closeSheet();toast(`${proper(name)} · ${h} ✓`)};
+      if(oldId){changeHouse(oldId,h);return}
+      if(needAuth()){openAuth({id:pidOf(name,h),name:proper(name),house:h});return}
+      addPerson(name,h);closeSheet();toast(`${proper(name)} · ${h} ✓`)};
     $("sheet").querySelectorAll("[data-h]").forEach(b=>b.onclick=()=>pick(b.dataset.h));
     $("hForm").addEventListener("submit",e=>{e.preventDefault();pick($("hNew").value)});
   });
 }
-function changeHouse(oldId,house){
-  const p=people.find(x=>x.id===oldId);if(!p||p.house===house)return;
-  const newId=pidOf(p.name,house);
+/* Сырсөз: кирүү же биринчи жолу коюу */
+function openAuth(p){
+  const reg=registered.has(p.id);
+  let err="",busy=false;
+  openSheet(()=>{
+    $("sheet").innerHTML=`<div class="grab"></div><h3>${esc(p.name)}</h3><div class="sub">${esc(p.house||"")}</div>
+      <form id="aForm" style="display:flex;flex-direction:column;gap:8px">
+        ${reg?`<div class="sub" style="margin:0">Сырсөзүңүздү жазыңыз</div>
+          <input class="field" id="aPass" type="password" autocomplete="current-password" placeholder="Сырсөз">`
+        :`<div class="sub" style="margin:0">Биринчи жолу кирип жатасыз — өзүңүзгө сырсөз коюңуз. Аны башка эч ким билбесин: сырсөзсүз сиздин ордуңузга эч ким белги кое албайт.</div>
+          <input class="field" id="aPass" type="password" autocomplete="new-password" placeholder="Сырсөз (кеминде 4 белги)">
+          <input class="field" id="aPass2" type="password" autocomplete="new-password" placeholder="Сырсөздү кайталаңыз">`}
+        ${err?`<div class="note" style="background:var(--bad-soft);color:var(--bad)">${esc(err)}</div>`:""}
+        <button class="wbtn pri" type="submit" ${busy?"disabled":""}>${busy?"Күтө туруңуз…":reg?"Кирүү":"Сырсөз коюп кирүү"}</button>
+      </form>
+      ${reg?'<p class="muted sm" style="margin:0;text-align:center">Сырсөздү унутсаңыз — жооптуу адамга айтыңыз, ал таблицадан тазалайт.</p>':""}
+      <button class="wbtn" data-act="backpeople">‹ Артка</button>`;
+    const f=$("aPass");if(f&&!busy)f.focus();
+    $("aForm").addEventListener("submit",async e=>{e.preventDefault();if(busy)return;
+      const pass=$("aPass").value;
+      if(pass.length<4){err=AUTH_ERR.short;sheetRedraw();return}
+      if(!reg&&pass!==$("aPass2").value){err="Сырсөздөр дал келген жок";sheetRedraw();return}
+      busy=true;err="";sheetRedraw();
+      let r;try{r=await api(reg?{action:"login",id:p.id,pass}:{action:"register",name:p.name,house:p.house,pass})}catch(x){r={ok:false,error:"net"}}
+      busy=false;
+      if(!r||!r.ok){err=r&&r.error==="locked"?`${AUTH_ERR.locked} (${r.minutes||15} мүн)`:AUTH_ERR[r&&r.error]||"Интернет жок же ката чыкты — кайра аракет кылыңыз";
+        if(r&&r.error==="exists")registered.add(p.id);sheetRedraw();return}
+      registered.add(r.id);
+      if(!people.some(x=>x.id===r.id)){const np={id:r.id,name:p.name,house:p.house};extraPeople.push(np);people.push(np)}
+      setAuth({id:r.id,token:r.token});localSave();closeSheet();toast(`Ассалому алейкум, ${p.name}!`);flush();
+    });
+  });
+}
+async function changeHouse(oldId,house){
+  const p=people.find(x=>x.id===oldId);if(!p||p.house===house){closeSheet();return}
+  let newId=pidOf(p.name,house);
+  if(needAuth()){
+    if(!auth||auth.id!==oldId){closeSheet();openPeople();return}
+    let r;try{r=await api({action:"rehouse",id:auth.id,token:auth.token,house})}catch(e){r={ok:false}}
+    if(!r||!r.ok){toast(r&&r.error==="exists"?"Бул үйдө ушундай ат мурун катталган":"Алмаштырылган жок — кайра аракет кылыңыз");return}
+    newId=r.id;
+  }
   for(const id of Object.keys(own)){
     const [pid,date]=splitId(id);if(pid!==oldId)continue;
     const nid=newId+"_"+date;
-    own[nid]={...(own[nid]||{}),...own[id]};pending[nid]=1;
-    own[id]={};pending[id]=1; // эски сап нөлгө түшөт
+    own[nid]={...(own[nid]||{}),...own[id]};if(pending[id]||!needAuth())pending[nid]=1;
+    delete own[id];delete pending[id];
+    if(!needAuth()){own[id]={};pending[id]=1} // сырсөзсүз режимде эски сап нөлгө түшөт
   }
   if(zikrsLocal[oldId])zikrsLocal[newId]=zikrsLocal[oldId];
   if(progress[oldId])progress[newId]=progress[oldId];
+  extraPeople=extraPeople.filter(x=>x.id!==oldId);
   if(!people.some(x=>x.id===newId)){const np={id:newId,name:p.name,house};extraPeople.push(np);people.push(np)}
-  me=newId;ls.set("mt_person",me);
+  if(needAuth()){registered.delete(oldId);registered.add(newId);setAuth({id:newId,token:auth.token})}else{me=newId;ls.set("mt_person",me)}
   entries={};new Set([...Object.keys(base),...Object.keys(own)]).forEach(rebuild);
-  localSave();render();flush();
+  localSave();closeSheet();toast(`${p.name} · ${house} ✓`);render();refresh();
 }
 
 /* ---------------- router ---------------- */
@@ -204,8 +256,9 @@ addEventListener("hashchange",()=>{parseHash();render();scrollTo(0,0)});
 
 /* ---------------- render ---------------- */
 function render(){
-  if(me&&people.length&&!people.some(p=>p.id===me))me="";
-  if(!me&&people.length){const s=ls.get("mt_person");if(people.some(p=>p.id===s))me=s}
+  if(!needAuth()&&me&&people.length&&!people.some(p=>p.id===me))me="";
+  if(needAuth())me=auth?auth.id:"";
+  else if(!me&&people.length){const s=ls.get("mt_person");if(people.some(p=>p.id===s))me=s}
   const p=meObj();
   $("whoName").textContent=p?p.name:"Атыңызды кошуңуз";
   $("ava").textContent=p?p.name.trim()[0].toUpperCase():"+";
@@ -518,10 +571,14 @@ function openPeople(){
         <button class="wbtn pri" type="submit">+ Кошуу</button></form>
       ${meObj()?`<button class="wbtn" id="chHouse">🏠 Үйдү алмаштыруу (${esc(meObj().house||"—")})</button>`:""}
       <button class="wbtn" data-act="install">📲 Телефонго орнотуу</button>
+      ${needAuth()&&auth?`<button class="wbtn" id="logout">🚪 Чыгуу</button>`:""}
       <h4>Тема</h4>
       <div class="themes">${THEMES.map(t=>`<button data-theme-id="${t.id}" class="${document.documentElement.dataset.theme===t.id?"on":""}"><i style="background:linear-gradient(135deg,${t.c[0]} 60%,${t.c[1]} 60%)"></i>${t.n}</button>`).join("")}</div>`;
     $("sheet").querySelectorAll("[data-theme-id]").forEach(b=>b.onclick=()=>{setTheme(b.dataset.themeId);sheetRedraw&&sheetRedraw();render()});
-    $("sheet").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{me=b.dataset.p;ls.set("mt_person",me);window._pq="";closeSheet()});
+    $("sheet").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{window._pq="";const p=people.find(x=>x.id===b.dataset.p);if(!p)return;
+      if(needAuth()){if(auth&&auth.id===p.id){closeSheet();return}openAuth(p);return}
+      me=p.id;ls.set("mt_person",me);closeSheet()});
+    if($("logout"))$("logout").onclick=()=>{setAuth(null);closeSheet();openPeople()};
     const s=$("pSearch");if(s){s.oninput=()=>{window._pq=s.value;const pos=s.selectionStart;sheetRedraw();const n=$("pSearch");n.focus();n.setSelectionRange(pos,pos)}}
     $("pForm").addEventListener("submit",e=>{e.preventDefault();const n=$("pName").value.trim();
       if(!n){$("pName").focus();return}window._pq="";openHousePick(n)});
