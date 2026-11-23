@@ -1,6 +1,6 @@
 // Минимум — service worker: интернетсиз да ачылат (Жевшен, Тасбихат тексттери да)
-const CACHE="minimum-v6";
-const SHELL=["/","/index.html","/styles.css","/app.js","/install.js","/config.js","/manifest.json",
+const CACHE="minimum-v8";
+const SHELL=["/","/index.html","/styles.css","/app.js","/install.js","/login.js","/config.js","/manifest.json",
   "/icon.svg","/icon-192.png","/icon-512.png","/apple-touch-icon.png","/data/jawshan.json","/data/tasbihat.json"];
 self.addEventListener("install",e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});

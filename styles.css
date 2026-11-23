@@ -333,3 +333,73 @@ select.field{appearance:none;-webkit-appearance:none;color:var(--fg)}
 .hgrid button{background:var(--card2);border-radius:16px;padding:16px 8px;font-weight:700;font-size:15px;border:2px solid transparent}
 .hgrid button.on{border-color:var(--accent);color:var(--accent)}
 .hgrid button:active{transform:scale(.97)}
+
+/* ================= ачылыш анимациясы ================= */
+#splash{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background:radial-gradient(120% 80% at 50% 35%,var(--hero2),var(--hero1));color:var(--hero-fg);transition:opacity .4s ease,transform .4s ease}
+#splash.out{opacity:0;transform:scale(1.06);pointer-events:none}
+#splash svg{width:150px;height:150px;overflow:visible}
+#splash .bd{fill:#f6e7b8;transform-box:fill-box;transform-origin:center;opacity:0;animation:sbead .42s cubic-bezier(.3,1.6,.5,1) forwards}
+#splash .ring{transform-origin:256px 256px;animation:sring 1.6s ease-out forwards}
+#splash .tas{opacity:0;transform:translateY(-40px);animation:stas .5s .78s cubic-bezier(.3,1.5,.5,1) forwards}
+#splash .glow{transform-origin:256px 256px;opacity:0;animation:sglow 1.2s .9s ease-out forwards}
+#splash h1{margin:0;font-family:var(--display);font-weight:600;font-size:30px;letter-spacing:.02em;opacity:0;transform:translateY(12px);animation:stxt .5s .85s ease-out forwards}
+#splash p{margin:-10px 0 0;font-size:14px;opacity:0;animation:stxt .5s 1s ease-out forwards}
+@keyframes sbead{0%{opacity:0;transform:scale(0)}100%{opacity:1;transform:scale(1)}}
+@keyframes sring{0%{transform:rotate(-40deg)}100%{transform:rotate(0)}}
+@keyframes stas{100%{opacity:1;transform:none}}
+@keyframes sglow{0%{opacity:.55;transform:scale(.6)}100%{opacity:0;transform:scale(1.5)}}
+@keyframes stxt{100%{opacity:.95;transform:none}}
+@media (prefers-reduced-motion:reduce){#splash *{animation-duration:.01s!important;animation-delay:0s!important}}
+
+/* ================= кирүү экраны ================= */
+#login{position:fixed;inset:0;z-index:55;overflow-y:auto;background:var(--bg);-webkit-overflow-scrolling:touch}
+#login .lg-in{min-height:100%;display:flex;flex-direction:column;max-width:520px;margin:0 auto}
+.lg-top{position:relative;text-align:center;color:var(--hero-fg);background:linear-gradient(160deg,var(--hero1),var(--hero2));
+  padding:calc(env(safe-area-inset-top,0px) + 26px) 20px 26px;border-radius:0 0 32px 32px}
+.lg-top h1{margin:6px 0 2px;font-family:var(--display);font-weight:600;font-size:24px}
+.lg-top h2{margin:10px 0 0;font-family:var(--display);font-weight:600;font-size:22px}
+.lg-top p{margin:4px 0 0;opacity:.85;font-size:14.5px}
+.lg-logo{width:64px;height:64px;margin:0 auto;color:#f6e7b8;animation:lgin .5s ease-out}
+.lg-logo svg{width:100%;height:100%}
+.lg-ava{width:64px;height:64px;border-radius:20px;margin:0 auto;background:rgba(255,255,255,.16);display:grid;place-items:center;font-family:var(--display);font-size:28px;font-weight:600}
+.lg-back{position:absolute;left:12px;top:calc(env(safe-area-inset-top,0px) + 14px);width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);color:inherit;font-size:26px;line-height:1}
+.lg-body{padding:18px 16px calc(env(safe-area-inset-bottom,0px) + 24px);display:flex;flex-direction:column;gap:12px;flex:1}
+.lg-search{font-size:16px}
+.lg-lbl{font-size:12.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:4px 2px -4px}
+.lg-chips{display:flex;flex-wrap:wrap;gap:8px}
+.lg-chips button{padding:11px 15px;border-radius:999px;background:var(--card);box-shadow:var(--shadow);font-weight:700;font-size:14.5px;border:2px solid transparent}
+.lg-chips button.on{background:var(--accent);color:var(--accent-ink)}
+.lg-list{display:flex;flex-direction:column;gap:8px}
+.lg-list button{display:flex;align-items:center;gap:12px;padding:12px;border-radius:18px;background:var(--card);box-shadow:var(--shadow);text-align:left;animation:lgin .25s ease-out both}
+.lg-list .ava{width:42px;height:42px;border-radius:14px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:800;font-size:17px;flex:none}
+.lg-list .nm{flex:1;font-weight:700;font-size:16px}
+.lg-list .nm small{display:block;font-size:12px;color:var(--muted);font-weight:600}
+.lg-list .lk{opacity:.5}
+.lg-list .nw{font-size:11.5px;font-weight:700;color:var(--prog)}
+.lg-link{margin-top:auto;padding:14px;font-weight:700;color:var(--accent);text-align:center}
+.lg-form{display:flex;flex-direction:column;gap:10px}
+.lg-pinbox{align-items:center;text-align:center}
+.lg-ttl{font-weight:800;font-size:18px;margin-top:4px}
+.lg-sub{color:var(--muted);font-size:13.5px;max-width:320px;margin-top:-6px}
+.lg-dots{display:flex;gap:18px;margin:10px 0 2px}
+.lg-dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--muted);transition:background .12s,transform .12s}
+.lg-dots i.on{background:var(--accent);border-color:var(--accent);transform:scale(1.12)}
+.lg-dots.busy i{animation:lgpulse .8s ease-in-out infinite}
+.lg-dots.busy i:nth-child(2){animation-delay:.1s}.lg-dots.busy i:nth-child(3){animation-delay:.2s}.lg-dots.busy i:nth-child(4){animation-delay:.3s}
+.lg-dots.shake{animation:lgshake .4s}
+.lg-err{min-height:20px;color:var(--bad);font-weight:700;font-size:14px;max-width:320px}
+.lg-pad{display:grid;grid-template-columns:repeat(3,76px);gap:14px 22px;margin-top:4px}
+.lg-pad button{width:76px;height:76px;border-radius:50%;background:var(--card);box-shadow:var(--shadow);font-size:28px;font-weight:600;font-family:var(--display);color:var(--fg);touch-action:manipulation}
+.lg-pad button:active{transform:scale(.93);background:var(--accent-soft)}
+.lg-pad .lg-sm{background:transparent;box-shadow:none;font-size:20px;color:var(--muted);font-family:inherit}
+.lg-pinbox .lg-form{width:100%;max-width:340px}
+.lg-hint{color:var(--muted);font-size:12.5px;margin:6px 0 0;max-width:300px}
+.prof{display:flex;align-items:center;gap:12px;padding:4px 2px}
+.prof .ava{width:52px;height:52px;border-radius:16px;font-size:22px}
+.prof b{display:block;font-size:19px}
+.prof span{color:var(--muted);font-weight:600}
+@keyframes lgin{from{opacity:0;transform:translateY(8px)}}
+@keyframes lgpulse{50%{transform:scale(.6);opacity:.5}}
+@keyframes lgshake{20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
+@media (prefers-reduced-motion:reduce){.lg-logo,.lg-list button,.lg-dots.shake,.lg-dots.busy i{animation:none}}
