@@ -329,3 +329,7 @@ select.field{appearance:none;-webkit-appearance:none;color:var(--fg)}
 .pointer{text-align:center;font-size:30px;line-height:1;color:var(--accent);animation:bob 1.2s ease-in-out infinite}
 @keyframes bob{50%{transform:translateY(6px)}}
 @media (prefers-reduced-motion:reduce){.pointer{animation:none}}
+.hgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hgrid button{background:var(--card2);border-radius:16px;padding:16px 8px;font-weight:700;font-size:15px;border:2px solid transparent}
+.hgrid button.on{border-color:var(--accent);color:var(--accent)}
+.hgrid button:active{transform:scale(.97)}

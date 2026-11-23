@@ -159,6 +159,39 @@ function addPerson(name,house){
   if(!people.some(p=>p.id===id)){const p={id,name,house};extraPeople.push(p);people.push(p)}
   me=id;ls.set("mt_person",me);localSave();render();
 }
+/* Кошкондон кийин: үйдү тандоо (же кийин алмаштыруу) */
+function openHousePick(name,oldId){
+  const houses=[...new Set([...HOUSES,...people.map(p=>p.house).filter(Boolean)])];
+  const curH=oldId?(people.find(p=>p.id===oldId)||{}).house:"";
+  openSheet(()=>{
+    $("sheet").innerHTML=`<div class="grab"></div><h3>${esc(proper(name))}, үйүңүз кайсы?</h3>
+      <div class="sub">Рейтингде үйүңүз менен чыгасыз</div>
+      <div class="hgrid">${houses.map(h=>`<button data-h="${esc(h)}" class="${h===curH?"on":""}">${esc(h)}</button>`).join("")}</div>
+      <form id="hForm" class="two"><input class="field" id="hNew" placeholder="Башка үй" maxlength="30" autocomplete="off"><button class="wbtn" type="submit" style="padding:12px">OK</button></form>
+      <button class="wbtn" data-act="${oldId?"close":"backpeople"}">‹ Артка</button>`;
+    const pick=h=>{h=String(h||"").trim();if(!h)return;
+      if(oldId)changeHouse(oldId,h);else addPerson(name,h);
+      closeSheet();toast(`${proper(name)} · ${h} ✓`)};
+    $("sheet").querySelectorAll("[data-h]").forEach(b=>b.onclick=()=>pick(b.dataset.h));
+    $("hForm").addEventListener("submit",e=>{e.preventDefault();pick($("hNew").value)});
+  });
+}
+function changeHouse(oldId,house){
+  const p=people.find(x=>x.id===oldId);if(!p||p.house===house)return;
+  const newId=pidOf(p.name,house);
+  for(const id of Object.keys(own)){
+    const [pid,date]=splitId(id);if(pid!==oldId)continue;
+    const nid=newId+"_"+date;
+    own[nid]={...(own[nid]||{}),...own[id]};pending[nid]=1;
+    own[id]={};pending[id]=1; // эски сап нөлгө түшөт
+  }
+  if(zikrsLocal[oldId])zikrsLocal[newId]=zikrsLocal[oldId];
+  if(progress[oldId])progress[newId]=progress[oldId];
+  if(!people.some(x=>x.id===newId)){const np={id:newId,name:p.name,house};extraPeople.push(np);people.push(np)}
+  me=newId;ls.set("mt_person",me);
+  entries={};new Set([...Object.keys(base),...Object.keys(own)]).forEach(rebuild);
+  localSave();render();flush();
+}
 
 /* ---------------- router ---------------- */
 function parseHash(){
@@ -480,10 +513,10 @@ function openPeople(){
     $("sheet").innerHTML=`<div class="grab"></div><h3>Ким толтурат?</h3>
       ${people.length>8?`<input class="field" id="pSearch" placeholder="🔍 Атыңызды издеңиз" value="${esc(window._pq||"")}" autocomplete="off">`:""}
       <div class="plist">${html||'<div class="empty">Табылган жок — төмөндөн кошуңуз</div>'}</div>
-      <form id="pForm" style="display:flex;flex-direction:column;gap:8px"><div class="sub" style="margin:4px 0 0">Тизмеде жок болсоңуз — атыңыз жана үйүңүз</div>
+      <form id="pForm" style="display:flex;flex-direction:column;gap:8px"><div class="sub" style="margin:4px 0 0">Тизмеде жок болсоңуз — атыңызды жазыңыз</div>
         <input class="field" id="pName" placeholder="Атыңыз (мис. Абдулла)" maxlength="30" autocomplete="off">
-        <select class="field" id="pHouse"><option value="">Үйүңүздү тандаңыз…</option>${houses.map(h=>`<option>${esc(h)}</option>`).join("")}</select>
         <button class="wbtn pri" type="submit">+ Кошуу</button></form>
+      ${meObj()?`<button class="wbtn" id="chHouse">🏠 Үйдү алмаштыруу (${esc(meObj().house||"—")})</button>`:""}
       <button class="wbtn" data-act="install">📲 Телефонго орнотуу</button>
       <button class="wbtn" id="openSet">⚙ Минимумдарды өзгөртүү</button>
       <h4>Тема</h4>
@@ -492,9 +525,9 @@ function openPeople(){
     $("sheet").querySelectorAll("[data-theme-id]").forEach(b=>b.onclick=()=>{setTheme(b.dataset.themeId);sheetRedraw&&sheetRedraw();render()});
     $("sheet").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{me=b.dataset.p;ls.set("mt_person",me);window._pq="";closeSheet()});
     const s=$("pSearch");if(s){s.oninput=()=>{window._pq=s.value;const pos=s.selectionStart;sheetRedraw();const n=$("pSearch");n.focus();n.setSelectionRange(pos,pos)}}
-    $("pForm").addEventListener("submit",e=>{e.preventDefault();const n=$("pName").value.trim(),h=$("pHouse").value;
-      if(!n){$("pName").focus();return}if(!h){$("pHouse").focus();toast("Үйүңүздү тандаңыз");return}
-      addPerson(n,h);window._pq="";closeSheet()});
+    $("pForm").addEventListener("submit",e=>{e.preventDefault();const n=$("pName").value.trim();
+      if(!n){$("pName").focus();return}window._pq="";openHousePick(n)});
+    if($("chHouse"))$("chHouse").onclick=()=>openHousePick(meObj().name,me);
   });
 }
 function openZikrAdd(){
@@ -567,6 +600,7 @@ document.addEventListener("click",e=>{
   const a=t.closest("[data-act]");if(!a||a.closest("#scrim")&&a.dataset.act==="close")return;
   const act=a.dataset.act;
   if(act==="zadd")openZikrAdd();
+  else if(act==="backpeople")openPeople();
   else if(act==="csv")csvDownload();
   else if(act==="report"){if(!me){openPeople();return}copyText(reportFor(me))}
   else if(act==="copyall"){const ws=curWs(),rs=tableRows(ws).filter(r=>Object.keys(r.t).some(k=>r.t[k]>0));copyText(rs.length?rs.map(r=>reportFor(r.p.id)).join("\n\n"):"Бул жумада эч ким белги кое элек.")}
