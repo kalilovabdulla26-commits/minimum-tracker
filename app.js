@@ -76,7 +76,10 @@ function setTheme(t){document.documentElement.dataset.theme=t;ls.set("mt_theme",
    бир сабы бар (own), ал Apps Script аркылуу жаңыланат. */
 const API=String(window.SHEET_API||"").trim();
 const FIELDS=["kk","jvsh","rus","prt","thj","orz","kino","mzk","avb","kn","adb","jto","sbk","z_istg","z_slv","z_tsb"];
+const OUT="Сырттан"; // үйдө жашабагандар
 const HOUSES=["ХБК","Анар","Айтиев","Мэрия","Таатан","Салкын тор 1","Салкын тор 2","Исанов 47"];
+const houseOrder=hs=>[...hs.filter(h=>h!==OUT),OUT];
+const houseBtn=h=>h===OUT?"🚶 Үйдө жашабайм":h;
 const proper=s=>String(s||"").trim().replace(/\s+/g," ").toLocaleLowerCase("ru").replace(/(^|[^a-zа-яёөүң])([a-zа-яёөүң])/gi,(m,a,b)=>a+b.toLocaleUpperCase("ru"));
 const pidOf=(name,house)=>proper(name)+"|"+String(house||"").trim();
 const splitId=id=>[id.slice(0,-11),id.slice(-10)];
@@ -172,12 +175,12 @@ function addPerson(name,house){ // сырсөзсүз режим (таблица
 }
 /* Кошкондон кийин: үйдү тандоо (же кийин алмаштыруу) */
 function openHousePick(name,oldId){
-  const houses=[...new Set([...HOUSES,...people.map(p=>p.house).filter(Boolean)])];
+  const houses=houseOrder([...new Set([...HOUSES,...people.map(p=>p.house).filter(Boolean)])]);
   const curH=oldId?(people.find(p=>p.id===oldId)||{}).house:"";
   openSheet(()=>{
     $("sheet").innerHTML=`<div class="grab"></div><h3>${esc(proper(name))}, үйүңүз кайсы?</h3>
       <div class="sub">Рейтингде үйүңүз менен чыгасыз</div>
-      <div class="hgrid">${houses.map(h=>`<button data-h="${esc(h)}" class="${h===curH?"on":""}">${esc(h)}</button>`).join("")}</div>
+      <div class="hgrid">${houses.map(h=>`<button data-h="${esc(h)}" class="${h===curH?"on":""}${h===OUT?" out":""}">${esc(houseBtn(h))}</button>`).join("")}</div>
       <form id="hForm" class="two"><input class="field" id="hNew" placeholder="Башка үй" maxlength="30" autocomplete="off"><button class="wbtn" type="submit" style="padding:12px">OK</button></form>
       <button class="wbtn" data-act="${oldId?"close":"backpeople"}">‹ Артка</button>`;
     const pick=h=>{h=String(h||"").trim();if(!h)return;
@@ -448,10 +451,10 @@ function viewRank(){
     .sort((a,b)=>b.pct-a.pct||a.p.name.localeCompare(b.p.name,"ky"));
   const MED=["🥇","🥈","🥉"];
   const body=rows.length?rows.map((x,i)=>{const d=x.pct-x.prev;
-    return `<div class="rk rk4${x.p.id===me?" me":""}${i<3&&x.pct>0?" top":""}"><span class="pl">${i<3&&x.pct>0?MED[i]:i+1}</span><div><b>${esc(x.p.name)}</b> <span class="hs">${esc(x.p.house||"")}</span><div class="bar" style="margin-top:6px"><div style="width:${x.pct}%;background:var(--accent)"></div></div></div><span class="chip ${cls(x.pct)}">${x.pct}%</span><span class="dl ${!x.had?"eq":d>0?"up":d<0?"down":"eq"}">${!x.had?"жаңы":d>0?"▲ "+d:d<0?"▼ "+(-d):"="}</span></div>`}).join(""):'<div class="empty">Бул жумада азырынча эч ким белги кое элек.</div>';
+    return `<div class="rk rk4${x.p.id===me?" me":""}${i<3&&x.pct>0?" top":""}"><span class="pl">${i<3&&x.pct>0?MED[i]:i+1}</span><div><b>${esc(x.p.name)}</b> <span class="hs">${esc(x.p.house===OUT?"үйдө жашабайт":x.p.house||"")}</span><div class="bar" style="margin-top:6px"><div style="width:${x.pct}%;background:var(--accent)"></div></div></div><span class="chip ${cls(x.pct)}">${x.pct}%</span><span class="dl ${!x.had?"eq":d>0?"up":d<0?"down":"eq"}">${!x.had?"жаңы":d>0?"▲ "+d:d<0?"▼ "+(-d):"="}</span></div>`}).join(""):'<div class="empty">Бул жумада азырынча эч ким белги кое элек.</div>';
   const hm=new Map();rows.filter(x=>activeIn(x.p.id,ws)).forEach(x=>{const h=x.p.house||"—";const o=hm.get(h)||{s:0,n:0};o.s+=x.pct;o.n++;hm.set(h,o)});
   const hs=[...hm.entries()].map(([h,o])=>({h,avg:Math.round(o.s/o.n),n:o.n})).sort((a,b)=>b.avg-a.avg);
-  const houses=hs.length?`<div class="panel"><h3>Үйлөр</h3>${hs.map((x,i)=>`<div class="rk rk4"><span class="pl">${i+1}</span><div><b>${esc(x.h)}</b><div class="bar" style="margin-top:6px"><div style="width:${x.avg}%;background:var(--prog)"></div></div></div><span class="chip ${cls(x.avg)}">${x.avg}%</span><span class="dl eq">${x.n} адам</span></div>`).join("")}</div>`:"";
+  const houses=hs.length?`<div class="panel"><h3>Үйлөр</h3>${hs.map((x,i)=>`<div class="rk rk4"><span class="pl">${i+1}</span><div><b>${esc(x.h===OUT?"🚶 Сырттан (үйдө жашабагандар)":x.h)}</b><div class="bar" style="margin-top:6px"><div style="width:${x.avg}%;background:var(--prog)"></div></div></div><span class="chip ${cls(x.avg)}">${x.avg}%</span><span class="dl eq">${x.n} адам</span></div>`).join("")}</div>`:"";
   return `<div class="sec"><h2>Рейтинг</h2><span class="muted sm">${fmt(ws)} – ${fmt(addDays(ws,6))}</span></div>
     <div class="weekbar"><button class="btn" data-w="-1" aria-label="Мурунку жума">‹</button><b>${fmt(ws)} – ${fmt(addDays(ws,6))}</b><button class="btn" data-w="1" aria-label="Кийинки жума">›</button></div>
     <div class="panel">${body}</div>

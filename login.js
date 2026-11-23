@@ -21,7 +21,7 @@ const LOGO='<svg viewBox="0 0 512 512" aria-hidden="true"><g fill="currentColor"
 const L={step:"find",house:"",q:"",p:null,pin:"",pin1:"",err:"",busy:false,text:false,newName:"",fromNew:false};
 let box=null;
 const avatar=n=>esc(String(n||"?").trim()[0]?.toUpperCase()||"?");
-const housesList=()=>[...new Set([...HOUSES,...people.map(p=>p.house).filter(Boolean)])];
+const housesList=()=>houseOrder([...new Set([...HOUSES,...people.map(p=>p.house).filter(Boolean)])]);
 
 function showLogin(o){
   Object.assign(L,{step:"find",house:"",q:"",p:null,pin:"",pin1:"",err:"",busy:false,text:false,fromNew:false},o||{});
@@ -48,7 +48,7 @@ function draw(){
     h=head("Ассалому алейкум! Өзүңүздү табыңыз")+`
       <div class="lg-body">
         <input class="field lg-search" id="lgQ" placeholder="🔍 Атыңызды жазыңыз" value="${esc(L.q)}" autocomplete="off" autocapitalize="words">
-        ${q?"":`<div class="lg-lbl">же үйүңүздү тандаңыз</div><div class="lg-chips">${hs.map(x=>`<button data-h="${esc(x)}" class="${x===L.house?"on":""}">${esc(x)}</button>`).join("")}</div>`}
+        ${q?"":`<div class="lg-lbl">же үйүңүздү тандаңыз</div><div class="lg-chips">${hs.map(x=>`<button data-h="${esc(x)}" class="${x===L.house?"on":""}${x===OUT?" out":""}">${esc(x===OUT?"🚶 Үйдө жашабайм":x)}</button>`).join("")}</div>`}
         <div class="lg-list">${(q||L.house)?(list.length?list.map(p=>`<button data-p="${esc(p.id)}"><span class="ava">${avatar(p.name)}</span><span class="nm">${esc(p.name)}${q?`<small>${esc(p.house)}</small>`:""}</span>${registered.has(p.id)?'<span class="lk">🔒</span>':""}</button>`).join(""):'<div class="empty">Табылган жок</div>'):""}</div>
         <button class="lg-link" data-l="new">Мен тизмеде жокмун → катталуу</button>
       </div>`;
@@ -57,7 +57,7 @@ function draw(){
       <input class="field lg-search" id="lgName" placeholder="Атыңыз (мис. Абдулла)" maxlength="30" value="${esc(L.newName)}" autocomplete="off" autocapitalize="words">
       <button class="wbtn pri" type="submit">Улантуу →</button></form></div>`;
   }else if(L.step==="house"){
-    h=head(`${esc(proper(L.newName))}, үйүңүз кайсы?`)+`<div class="lg-body"><div class="hgrid">${housesList().map(x=>`<button data-nh="${esc(x)}">${esc(x)}</button>`).join("")}</div>
+    h=head(`${esc(proper(L.newName))}, үйүңүз кайсы?`)+`<div class="lg-body"><div class="hgrid">${housesList().map(x=>`<button data-nh="${esc(x)}" class="${x===OUT?"out":""}">${esc(houseBtn(x))}</button>`).join("")}</div>
       <form id="lgOther" class="two"><input class="field" id="lgH" placeholder="Башка үй" maxlength="30" autocomplete="off"><button class="wbtn" type="submit" style="padding:12px">OK</button></form></div>`;
   }else if(L.step==="pin"){
     const p=L.p,reg=registered.has(p.id);

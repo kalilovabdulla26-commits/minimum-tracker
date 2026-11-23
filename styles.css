@@ -403,3 +403,6 @@ select.field{appearance:none;-webkit-appearance:none;color:var(--fg)}
 @keyframes lgpulse{50%{transform:scale(.6);opacity:.5}}
 @keyframes lgshake{20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
 @media (prefers-reduced-motion:reduce){.lg-logo,.lg-list button,.lg-dots.shake,.lg-dots.busy i{animation:none}}
+.hgrid button.out{grid-column:1/-1;border:2px dashed var(--line);background:transparent}
+.lg-chips button.out{border:2px dashed var(--line);background:transparent;box-shadow:none}
+.lg-chips button.out.on{background:var(--accent);border-color:var(--accent)}
