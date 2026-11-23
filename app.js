@@ -444,11 +444,11 @@ function activeIn(pid,ws){for(let i=0;i<7;i++)if(dayHas(pid,iso(addDays(ws,i))))
 function weekPeople(ws){return people.filter(p=>activeIn(p.id,ws)||p.id===me)}
 function viewRank(){
   const ws=curWs(),pws=addDays(ws,-7);
-  const rows=weekPeople(ws).map(p=>({p,pct:weekPct(p.id,ws),prev:weekPct(p.id,pws)}))
+  const rows=weekPeople(ws).map(p=>({p,pct:weekPct(p.id,ws),prev:weekPct(p.id,pws),had:activeIn(p.id,pws)}))
     .sort((a,b)=>b.pct-a.pct||a.p.name.localeCompare(b.p.name,"ky"));
   const MED=["🥇","🥈","🥉"];
   const body=rows.length?rows.map((x,i)=>{const d=x.pct-x.prev;
-    return `<div class="rk rk4${x.p.id===me?" me":""}${i<3&&x.pct>0?" top":""}"><span class="pl">${i<3&&x.pct>0?MED[i]:i+1}</span><div><b>${esc(x.p.name)}</b> <span class="hs">${esc(x.p.house||"")}</span><div class="bar" style="margin-top:6px"><div style="width:${x.pct}%;background:var(--accent)"></div></div></div><span class="chip ${cls(x.pct)}">${x.pct}%</span><span class="dl ${d>0?"up":d<0?"down":"eq"}">${d>0?"▲ "+d:d<0?"▼ "+(-d):"="}</span></div>`}).join(""):'<div class="empty">Бул жумада азырынча эч ким белги кое элек.</div>';
+    return `<div class="rk rk4${x.p.id===me?" me":""}${i<3&&x.pct>0?" top":""}"><span class="pl">${i<3&&x.pct>0?MED[i]:i+1}</span><div><b>${esc(x.p.name)}</b> <span class="hs">${esc(x.p.house||"")}</span><div class="bar" style="margin-top:6px"><div style="width:${x.pct}%;background:var(--accent)"></div></div></div><span class="chip ${cls(x.pct)}">${x.pct}%</span><span class="dl ${!x.had?"eq":d>0?"up":d<0?"down":"eq"}">${!x.had?"жаңы":d>0?"▲ "+d:d<0?"▼ "+(-d):"="}</span></div>`}).join(""):'<div class="empty">Бул жумада азырынча эч ким белги кое элек.</div>';
   const hm=new Map();rows.filter(x=>activeIn(x.p.id,ws)).forEach(x=>{const h=x.p.house||"—";const o=hm.get(h)||{s:0,n:0};o.s+=x.pct;o.n++;hm.set(h,o)});
   const hs=[...hm.entries()].map(([h,o])=>({h,avg:Math.round(o.s/o.n),n:o.n})).sort((a,b)=>b.avg-a.avg);
   const houses=hs.length?`<div class="panel"><h3>Үйлөр</h3>${hs.map((x,i)=>`<div class="rk rk4"><span class="pl">${i+1}</span><div><b>${esc(x.h)}</b><div class="bar" style="margin-top:6px"><div style="width:${x.avg}%;background:var(--prog)"></div></div></div><span class="chip ${cls(x.avg)}">${x.avg}%</span><span class="dl eq">${x.n} адам</span></div>`).join("")}</div>`:"";
