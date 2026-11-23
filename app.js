@@ -47,7 +47,8 @@ const meObj=()=>people.find(p=>p.id===me);
 const zikrsOf=()=>{const z=meObj()?.zikrs||DEF_Z;return z.map(q=>q.id==="tsb"?DEF_Z[2]:q)};
 const valsOn=(pid,ds)=>entries[pid+"_"+ds]?.values||{};
 function weekSums(pid,ws){const t={};for(let i=0;i<7;i++){const v=valsOn(pid,iso(addDays(ws,i)));for(const k in v)t[k]=(t[k]||0)+(+v[k]||0)}return t}
-function weekPct(pid,ws){const t=weekSums(pid,ws);return Math.round(ITEMS.reduce((a,it)=>a+Math.min(1,(t[it.k]||0)/it.min),0)/ITEMS.length*100)}
+const PCT_ITEMS=ITEMS.filter(it=>it.k!=="mzk"); // таблицадагыдай: % — 12 иш (МЗК кирбейт)
+function weekPct(pid,ws){const t=weekSums(pid,ws);return Math.round(PCT_ITEMS.reduce((a,it)=>a+Math.min(1,(t[it.k]||0)/it.min),0)/PCT_ITEMS.length*100)}
 const cls=p=>p>=100?"g":p>=50?"y":"r";
 const curWs=()=>weekStartOf(fromIso(selDate));
 const today=()=>iso(new Date());
@@ -456,7 +457,7 @@ function viewRank(){
     <div class="panel">${body}</div>
     ${houses}
     <a class="btn pri wide" href="#table" style="padding:15px;text-align:center">📊 Жалпы таблица (кагаздагыдай)</a>
-    <p class="muted sm" style="margin:0 4px;text-align:center">% — 13 иш боюнча орточо · ▲▼ — өткөн жумага салыштырганда</p>
+    <p class="muted sm" style="margin:0 4px;text-align:center">% — 12 иш боюнча орточо (МЗК кирбейт) · ▲▼ — өткөн жумага салыштырганда</p>
     ${!API?'<div class="note">Азыр маалымат ушул телефондо гана сакталат, ошондуктан рейтингде башкалар көрүнбөйт.</div>':""}`;
 }
 
