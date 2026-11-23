@@ -3,7 +3,7 @@
 
 const ITEMS=[
  {k:"kk",s:"К-К",n:"Курани Карим",min:5,u:"бет",step:1},
- {k:"jvsh",s:"ЖВШ",n:"Жевшен",min:1,u:"бап",jv:true},
+ {k:"jvsh",s:"ЖВШ",n:"Жевшен",min:1,u:"бап",jv:true,step:1},
  {k:"rus",s:"РУС",n:"Рисале-и Нур",min:21,u:"бет"},
  {k:"prt",s:"ПРТ",n:"Пырланта",min:35,u:"бет"},
  {k:"thj",s:"ТХЖ",n:"Тахажжуд",min:2,u:"жолу"},
@@ -18,7 +18,7 @@ const ITEMS=[
 ];
 ITEMS.forEach(it=>{it.base={min:it.min,step:it.step}});
 let settings={};
-function applySettings(){ITEMS.forEach(it=>{const o=settings?.items?.[it.k]||{};it.min=Math.max(1,+o.min||it.base.min);it.step=+o.step||it.base.step})}
+function applySettings(){ITEMS.forEach(it=>{it.min=it.base.min;it.step=it.base.step})} // минимумдар бекитилген, өзгөртүлбөйт
 const DEF_Z=[{id:"istg",n:"Истигфар",goal:100},{id:"slv",n:"Салават",goal:100},{id:"tsb",n:"Тасбихат",goal:2,unit:"жолу",manual:true}];
 const DAYS=["ВС","ПН","ВТ","СР","ЧТ","ПТ","СБ"];
 const DAYS_LONG=["Жекшемби","Дүйшөмбү","Шейшемби","Шаршемби","Бейшемби","Жума","Ишемби"];
@@ -489,7 +489,7 @@ function openItem(k){
     const focused=document.activeElement?.id==="cIn";
     $("sheet").innerHTML=`<div class="grab"></div><h3>${it.n}</h3><div class="sub">${dayLabel()} · ${it.u||"саны"}</div>
       <div class="counter"><button class="rbtn" id="cMinus" aria-label="Азайтуу">−</button><input id="cIn" type="number" inputmode="numeric" min="0" value="${t}"><button class="rbtn pl" id="cPlus" aria-label="Көбөйтүү">+</button></div>
-      <div class="quick">${[1,5,10,20].map(n=>`<button data-q="${n}">+${n}</button>`).join("")}</div>
+      <div class="quick"${it.jv?' style="grid-template-columns:1fr"':""}>${(it.jv?[1]:[1,5,10,20]).map(n=>`<button data-q="${n}">+${n}${it.jv?" бап":""}</button>`).join("")}</div>
       <div><div style="display:flex;justify-content:space-between"><span>Жума: <b>${w} / ${it.min}</b> ${it.u}</span><span class="${done?"up":"muted"}">${done?"Минимум ✓":Math.max(0,it.min-w)+" калды"}</span></div><div class="bar" style="margin-top:8px"><div style="width:${Math.min(100,w/it.min*100)}%;background:var(--${done?"ok":"prog"})"></div></div></div>
       ${it.hint?`<div class="muted sm" style="text-align:center">${it.hint}</div>`:""}
       ${it.jv?`<a class="wbtn" style="text-align:center" href="#jawshan" data-act="close">📖 Жевшенди ачуу</a>`:`<button class="wbtn" id="cTas">📿 Тасбих менен санау</button>`}
@@ -518,10 +518,8 @@ function openPeople(){
         <button class="wbtn pri" type="submit">+ Кошуу</button></form>
       ${meObj()?`<button class="wbtn" id="chHouse">🏠 Үйдү алмаштыруу (${esc(meObj().house||"—")})</button>`:""}
       <button class="wbtn" data-act="install">📲 Телефонго орнотуу</button>
-      <button class="wbtn" id="openSet">⚙ Минимумдарды өзгөртүү</button>
       <h4>Тема</h4>
       <div class="themes">${THEMES.map(t=>`<button data-theme-id="${t.id}" class="${document.documentElement.dataset.theme===t.id?"on":""}"><i style="background:linear-gradient(135deg,${t.c[0]} 60%,${t.c[1]} 60%)"></i>${t.n}</button>`).join("")}</div>`;
-    $("openSet").onclick=()=>{closeSheet();openSettings()};
     $("sheet").querySelectorAll("[data-theme-id]").forEach(b=>b.onclick=()=>{setTheme(b.dataset.themeId);sheetRedraw&&sheetRedraw();render()});
     $("sheet").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{me=b.dataset.p;ls.set("mt_person",me);window._pq="";closeSheet()});
     const s=$("pSearch");if(s){s.oninput=()=>{window._pq=s.value;const pos=s.selectionStart;sheetRedraw();const n=$("pSearch");n.focus();n.setSelectionRange(pos,pos)}}
