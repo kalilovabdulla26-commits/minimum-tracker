@@ -78,6 +78,8 @@ const API=String(window.SHEET_API||"").trim();
 const FIELDS=["kk","jvsh","rus","prt","thj","orz","kino","mzk","avb","kn","adb","jto","sbk","z_istg","z_slv","z_tsb"];
 const OUT="Сырттан"; // үйдө жашабагандар
 const HOUSES=["ХБК","Анар","Айтиев","Мэрия","Таатан","Салкын тор 1","Салкын тор 2","Исанов 47"];
+// Таблицада азырынча жообу жок болсо да тизмеде көрүнсүн (аты, үйү)
+const ROSTER=[["Нуржигит","Салкын тор 2"]];
 const houseOrder=hs=>[...hs.filter(h=>h!==OUT),OUT];
 const houseBtn=h=>h===OUT?"🚶 Үйдө жашабайм":h;
 const proper=s=>String(s||"").trim().replace(/\s+/g," ").toLocaleLowerCase("ru").replace(/(^|[^a-zа-яёөүң])([a-zа-яёөүң])/gi,(m,a,b)=>a+b.toLocaleUpperCase("ru"));
@@ -103,6 +105,7 @@ function applyRows(rows){
   });
   for(const k in srv)if(!pending[k]&&!timers[k])own[k]=srv[k];
   lastUsers.forEach(u=>{if(!ppl.has(u.id))ppl.set(u.id,{id:u.id,name:u.n,house:u.h})});
+  ROSTER.forEach(([n,h])=>{const id=pidOf(n,h);if(!ppl.has(id))ppl.set(id,{id,name:proper(n),house:h})});
   registered=new Set(lastUsers.map(u=>u.id));
   extraPeople=extraPeople.filter(p=>!ppl.has(p.id));
   people=[...ppl.values(),...extraPeople];
