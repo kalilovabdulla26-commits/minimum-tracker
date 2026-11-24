@@ -80,6 +80,13 @@ const OUT="Сырттан"; // үйдө жашабагандар
 const HOUSES=["ХБК","Анар","Айтиев","Мэрия","Таатан","Салкын тор 1","Салкын тор 2","Исанов 47"];
 // Таблицада азырынча жообу жок болсо да тизмеде көрүнсүн (аты, үйү)
 const ROSTER=[["Нуржигит","Салкын тор 2"]];
+// Бир эле адамдын ар башка жазылган аттары → бир ат (сол жак — ката жазылганы)
+const ALIAS={
+  "Асылбеу|Анар":"Асылбек|Анар",
+  "Зиядинов Усог|Мэрия":"Зиядинов Усон|Мэрия",
+  "Кошмурат|ХБК":"Кошмурат Турдубеков|ХБК",
+};
+const canon=id=>ALIAS[id]||id;
 const houseOrder=hs=>[...hs.filter(h=>h!==OUT),OUT];
 const houseBtn=h=>h===OUT?"🚶 Үйдө жашабайм":h;
 const proper=s=>String(s||"").trim().replace(/\s+/g," ").toLocaleLowerCase("ru").replace(/(^|[^a-zа-яёөүң])([a-zа-яёөүң])/gi,(m,a,b)=>a+b.toLocaleUpperCase("ru"));
@@ -96,22 +103,25 @@ function rebuild(id){
 function applyRows(rows){
   lastRows=rows||[];base={};
   const ppl=new Map(),srv={};
+  const add=id=>{if(!ppl.has(id)){const [n,h]=id.split("|");ppl.set(id,{id,name:n,house:h||""})}};
   lastRows.forEach(r=>{
-    const pid=pidOf(r.n,r.h),id=pid+"_"+r.d;
-    if(!ppl.has(pid))ppl.set(pid,{id:pid,name:proper(r.n),house:String(r.h||"").trim()});
-    if(r.k){srv[r.k]=r.j||{};return}
+    const raw=pidOf(r.n,r.h),pid=canon(raw),id=pid+"_"+r.d;
+    add(pid);
+    if(r.k&&raw===pid){srv[r.k]=r.j||{};return}
     const b=base[id]||(base[id]={});
     FIELDS.forEach((f,i)=>{const x=+(r.v||[])[i]||0;if(x)b[f]=(b[f]||0)+x});
   });
   for(const k in srv)if(!pending[k]&&!timers[k])own[k]=srv[k];
-  lastUsers.forEach(u=>{if(!ppl.has(u.id))ppl.set(u.id,{id:u.id,name:u.n,house:u.h})});
-  ROSTER.forEach(([n,h])=>{const id=pidOf(n,h);if(!ppl.has(id))ppl.set(id,{id,name:proper(n),house:h})});
-  registered=new Set(lastUsers.map(u=>u.id));
-  extraPeople=extraPeople.filter(p=>!ppl.has(p.id));
+  for(const k of Object.keys(own))if(ALIAS[splitId(k)[0]]){delete own[k];delete pending[k]}
+  lastUsers.forEach(u=>add(canon(u.id)));
+  ROSTER.forEach(([n,h])=>add(canon(pidOf(n,h))));
+  registered=new Set(lastUsers.map(u=>u.id).filter(id=>!ALIAS[id]));
+  extraPeople=extraPeople.filter(p=>!ppl.has(p.id)&&!ALIAS[p.id]);
   people=[...ppl.values(),...extraPeople];
   people.forEach(p=>{if(zikrsLocal[p.id])p.zikrs=zikrsLocal[p.id]});
   entries={};
   new Set([...Object.keys(base),...Object.keys(own)]).forEach(rebuild);
+  if(typeof auth!=="undefined"&&auth&&ALIAS[auth.id]){setAuth(null);setTimeout(()=>{toast("Атыңыз бириктирилди — туура атыңыз менен кайра кириңиз");openPeople()},50)}
 }
 function localLoad(){
   try{const o=JSON.parse(ls.get("mt_v2")||"{}");own=o.own||{};pending=o.pending||{};lastUsers=o.users||[];extraPeople=o.extra||[];progress=o.progress||{};settings=o.settings||{};zikrsLocal=o.zikrs||{};applySettings();applyRows(o.rows||[])}catch(e){}
